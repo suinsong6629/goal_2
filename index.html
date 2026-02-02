@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설계사 목표 실적 관리 시스템 - 통합형</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #f1f5f9;
+        }
+
+        .progress-container {
+            position: relative;
+            height: 32px;
+            background-color: #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.5s ease;
+        }
+
+        .target-marker {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background-color: #ef4444;
+            z-index: 10;
+        }
+
+        .target-label {
+            position: absolute;
+            top: -20px;
+            transform: translateX(-50%);
+            font-size: 10px;
+            font-weight: 700;
+            color: #ef4444;
+            white-space: nowrap;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .employee-item {
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .employee-item.active {
+            background-color: #eff6ff; /* 블루 톤으로 원복 */
+            border-color: #3b82f6; /* 블루 톤으로 원복 */
+        }
+
+        .list-delete-btn {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .employee-item:hover .list-delete-btn {
+            opacity: 1;
+        }
+
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .history-item {
+            border-left: 2px solid #e2e8f0;
+            padding-left: 12px;
+            position: relative;
+            padding-bottom: 12px;
+            transition: all 0.2s;
+        }
+        .history-item::before {
+            content: '';
+            position: absolute;
+            left: -5px;
+            top: 4px;
+            width: 8px;
+            height: 8px;
+            background: #cbd5e1;
+            border-radius: 50%;
+        }
+        .history-item:hover {
+            background-color: #f8fafc;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+    <div class="max-w-6xl mx-auto">
+        <!-- 상단 요약 대시보드 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="card p-5 border-l-4 border-blue-500">
+                <div class="text-slate-500 text-sm font-medium">전체 합산 실적</div>
+                <div class="text-2xl font-bold text-slate-800" id="summary-total-perf">0원</div>
+            </div>
+            <div class="card p-5 border-l-4 border-green-500">
+                <div class="text-slate-500 text-sm font-medium">평균 달성률</div>
+                <div class="text-2xl font-bold text-slate-800" id="summary-avg-rate">0%</div>
+            </div>
+            <div class="card p-5 border-l-4 border-slate-800">
+                <div class="text-slate-500 text-sm font-medium">관리 설계사 수</div>
+                <div class="text-2xl font-bold text-slate-800" id="summary-count">0명</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- 왼쪽: 직원 리스트 -->
+            <div class="lg:col-span-4 flex flex-col gap-4">
+                <div class="card p-5 flex flex-col h-[750px]">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-bold text-slate-700 flex items-center gap-2">
+                            <i class="fa-solid fa-users text-blue-500"></i> 설계사 리스트
+                        </h2>
+                    </div>
+                    
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="new-emp-name" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500" placeholder="이름 입력">
+                        <button id="add-emp-btn" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">추가</button>
+                    </div>
+
+                    <div id="employee-list" class="flex-1 overflow-y-auto custom-scroll flex flex-col gap-2 pr-1"></div>
+                </div>
+            </div>
+
+            <!-- 오른쪽: 상세 대시보드 -->
+            <div class="lg:col-span-8">
+                <div id="empty-state" class="card h-full flex flex-col items-center justify-center p-12 text-center">
+                    <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                        <i class="fa-solid fa-user-check text-3xl text-slate-300"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-700 mb-2">설계사를 선택해주세요</h3>
+                    <p class="text-slate-400">왼쪽 리스트에서 실적을 관리할 설계사를 클릭하세요.</p>
+                </div>
+
+                <div id="detail-dashboard" class="hidden space-y-6 animate-fade-in">
+                    <div class="card p-6">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 class="text-2xl font-black text-slate-800" id="detail-name">홍길동</h2>
+                                <p class="text-sm text-slate-400">개별 실적 상세 현황 (2026년 2월)</p>
+                            </div>
+                            <button id="delete-emp-btn" class="text-slate-300 hover:text-red-500 transition px-2 py-1">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex justify-between items-end mb-10">
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">현재 달성액</span>
+                                <div class="text-4xl font-black text-blue-600 mt-1" id="display-current">0원</div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">최종 목표 달성률</span>
+                                <div class="text-2xl font-bold text-slate-700 mt-1" id="display-percentage">0%</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4 pt-6">
+                            <div class="progress-container">
+                                <div id="progress-bar" class="progress-bar"></div>
+                                <div id="marker1" class="target-marker"><span class="target-label">1차</span></div>
+                                <div id="marker2" class="target-marker"><span class="target-label">2차</span></div>
+                            </div>
+                        </div>
+
+                        <div id="trend-chart-container" class="mb-10 w-full h-72 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-slate-100 text-center">
+                            <div>
+                                <div class="text-[10px] text-slate-400 font-bold mb-1">1차 목표</div>
+                                <div class="text-sm font-bold text-slate-700" id="stat-target1">0원</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-slate-400 font-bold mb-1">2차 목표</div>
+                                <div class="text-sm font-bold text-slate-700" id="stat-target2">0원</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-slate-400 font-bold mb-1">달성 실적</div>
+                                <div class="text-sm font-bold text-blue-600" id="stat-achieved">0원</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-slate-400 font-bold mb-1">부족 실적</div>
+                                <div class="text-sm font-bold text-red-500" id="stat-remaining">0원</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 실적 추가 섹션 -->
+                        <div class="card p-6">
+                            <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-coins text-yellow-500"></i> 실적 합산 추가
+                            </h3>
+                            <div class="flex flex-col gap-3">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    <input type="date" id="add-date-input" class="w-full p-2 border border-slate-200 rounded-lg text-xs md:text-sm outline-none focus:border-blue-500">
+                                    <input type="number" id="add-value-input" class="w-full p-2 border border-slate-200 rounded-lg text-xs md:text-sm outline-none focus:border-blue-500" placeholder="금액 입력">
+                                </div>
+                                <div class="flex gap-2">
+                                    <button id="add-perf-btn" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-blue-700">실적 누적하기</button>
+                                    <button id="reset-btn" class="px-4 py-2 border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50" title="실적 초기화"><i class="fa-solid fa-rotate-left"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 목표 설정 섹션 -->
+                        <div class="card p-6">
+                            <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                <i class="fa-solid fa-bullseye text-red-500"></i> 목표 변경
+                            </h3>
+                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                <input type="number" id="target1-input" class="p-2 border border-slate-200 rounded-lg text-sm outline-none" placeholder="1차 목표">
+                                <input type="number" id="target2-input" class="p-2 border border-slate-200 rounded-lg text-sm outline-none" placeholder="2차 목표">
+                            </div>
+                            <button id="set-goals-btn" class="w-full bg-slate-800 text-white py-2 rounded-lg font-bold text-sm hover:bg-slate-700">설정 적용</button>
+                        </div>
+                    </div>
+
+                    <div class="card p-6">
+                        <h3 class="font-bold text-slate-700 mb-4 flex items-center justify-between">
+                            <span class="flex items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> 누적 실적 이력
+                            </span>
+                        </h3>
+                        <div id="performance-history" class="max-h-64 overflow-y-auto custom-scroll flex flex-col">
+                            <div class="text-center py-4 text-slate-400 text-sm">실적 기록이 없습니다.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 알림 -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full opacity-0 pointer-events-none transition-opacity duration-300 shadow-xl z-[999]">
+        메시지
+    </div>
+
+    <!-- 모달 1: 설계사 삭제 확인 -->
+    <div id="confirm-modal" class="modal-overlay">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">정말 삭제하시겠습니까?</h3>
+            <p class="text-slate-500 text-sm mb-6">해당 설계사의 모든 실적 데이터가 영구적으로 삭제됩니다.</p>
+            <div class="flex gap-3">
+                <button id="modal-cancel" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold">취소</button>
+                <button id="modal-confirm" class="flex-1 py-2 bg-red-500 text-white rounded-lg font-bold">삭제하기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달 2: 실적 이력 수정 -->
+    <div id="history-edit-modal" class="modal-overlay">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+            <h3 class="text-lg font-bold text-slate-800 mb-4">실적 금액 수정</h3>
+            <input type="number" id="edit-history-input" class="w-full p-3 border border-slate-200 rounded-xl mb-6 outline-none focus:border-blue-500" placeholder="금액 입력">
+            <div class="flex gap-3">
+                <button id="history-edit-cancel" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold">취소</button>
+                <button id="history-edit-confirm" class="flex-1 py-2 bg-blue-600 text-white rounded-lg font-bold">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달 3: 이력 개별 삭제 확인 -->
+    <div id="history-delete-modal" class="modal-overlay">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+            <h3 class="text-lg font-bold text-slate-800 mb-2">이력을 삭제하시겠습니까?</h3>
+            <p class="text-slate-500 text-sm mb-6">선택한 실적 이력이 삭제되며 전체 합계가 재계산됩니다.</p>
+            <div class="flex gap-3">
+                <button id="history-delete-cancel" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold">취소</button>
+                <button id="history-delete-confirm" class="flex-1 py-2 bg-red-500 text-white rounded-lg font-bold">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let employees = JSON.parse(localStorage.getItem('ems_employees')) || [];
+        let selectedId = null;
+        let pendingDeleteId = null;
+        let pendingHistoryIdx = null;
+        let trendChart = null; 
+
+        // DOM
+        const el = {
+            list: document.getElementById('employee-list'),
+            emptyState: document.getElementById('empty-state'),
+            detailDashboard: document.getElementById('detail-dashboard'),
+            totalPerf: document.getElementById('summary-total-perf'),
+            avgRate: document.getElementById('summary-avg-rate'),
+            summaryCount: document.getElementById('summary-count'),
+            toast: document.getElementById('toast'),
+            confirmModal: document.getElementById('confirm-modal'),
+            historyEditModal: document.getElementById('history-edit-modal'),
+            historyDeleteModal: document.getElementById('history-delete-modal'),
+            detailName: document.getElementById('detail-name'),
+            progressBar: document.getElementById('progress-bar'),
+            displayCurrent: document.getElementById('display-current'),
+            displayPercentage: document.getElementById('display-percentage'),
+            statTarget1: document.getElementById('stat-target1'),
+            statTarget2: document.getElementById('stat-target2'),
+            statAchieved: document.getElementById('stat-achieved'),
+            statRemaining: document.getElementById('stat-remaining'),
+            marker1: document.getElementById('marker1'),
+            marker2: document.getElementById('marker2'),
+            historyList: document.getElementById('performance-history'),
+            trendChartCanvas: document.getElementById('trendChart'),
+            addDateInput: document.getElementById('add-date-input'),
+            addValueInput: document.getElementById('add-value-input')
+        };
+
+        el.addDateInput.value = '2026-02-02';
+
+        function saveData() { localStorage.setItem('ems_employees', JSON.stringify(employees)); }
+        function formatWon(val) { return val.toLocaleString() + '원'; }
+        function showToast(msg) {
+            el.toast.innerText = msg;
+            el.toast.style.opacity = '1';
+            setTimeout(() => el.toast.style.opacity = '0', 2000);
+        }
+
+        function updateSummary() {
+            const total = employees.reduce((sum, emp) => sum + emp.current, 0);
+            const avg = employees.length > 0 
+                ? employees.reduce((sum, emp) => sum + (emp.target2 > 0 ? (emp.current / emp.target2 * 100) : 0), 0) / employees.length 
+                : 0;
+            el.totalPerf.innerText = formatWon(total);
+            el.avgRate.innerText = `${Math.round(avg)}%`;
+            el.summaryCount.innerText = `${employees.length}명`;
+        }
+
+        function renderList() {
+            el.list.innerHTML = '';
+            employees.forEach(emp => {
+                const rate = emp.target2 > 0 ? Math.round((emp.current / emp.target2) * 100) : 0;
+                const isActive = emp.id === selectedId;
+                const item = document.createElement('div');
+                // 활성화 시 강조색 블루로 복귀
+                item.className = `employee-item p-4 border border-slate-100 rounded-xl bg-white shadow-sm hover:border-blue-300 ${isActive ? 'active shadow-md ring-1 ring-blue-500' : ''}`;
+                
+                // 디자인 수정: 수치 텍스트는 블루로 복구, 채워지는 막대(bg-red-500)만 빨간색 유지
+                item.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold text-slate-700 text-sm">${emp.name}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-blue-600">${rate}%</span>
+                            <button class="list-delete-btn text-slate-300 hover:text-red-500 transition px-1" onclick="event.stopPropagation(); openDeleteModal(${emp.id})">
+                                <i class="fa-solid fa-trash-can text-[10px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                        <div class="h-full bg-red-500" style="width: ${Math.min(rate, 100)}%"></div>
+                    </div>
+                `;
+                item.onclick = () => selectEmployee(emp.id);
+                el.list.appendChild(item);
+            });
+            updateSummary();
+        }
+
+        function selectEmployee(id) {
+            selectedId = id;
+            const emp = employees.find(e => e.id === id);
+            if (!emp) return;
+            el.emptyState.classList.add('hidden');
+            el.detailDashboard.classList.remove('hidden');
+            el.detailName.innerText = emp.name;
+            document.getElementById('target1-input').value = emp.target1;
+            document.getElementById('target2-input').value = emp.target2;
+            updateDetailUI(emp);
+            renderList();
+        }
+
+        function updateDetailUI(emp) {
+            emp.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+            let cumulative = 0;
+            emp.history.forEach(h => {
+                cumulative += h.amount;
+                h.totalAfter = cumulative;
+            });
+            emp.current = cumulative;
+
+            const rate = emp.target2 > 0 ? (emp.current / emp.target2) * 100 : 0;
+            const marker1Pos = emp.target2 > 0 ? (emp.target1 / emp.target2) * 100 : 0;
+
+            el.progressBar.style.width = `${Math.min(rate, 100)}%`;
+            el.progressBar.className = 'progress-bar'; 
+            if (emp.current < emp.target1) el.progressBar.classList.add('bg-green-500');
+            else if (emp.current < emp.target2) el.progressBar.classList.add('bg-amber-500');
+            else el.progressBar.classList.add('bg-blue-600');
+            
+            el.marker1.style.left = `${marker1Pos}%`;
+            el.marker2.style.left = `100%`;
+
+            el.displayCurrent.innerText = formatWon(emp.current);
+            el.displayPercentage.innerText = `${Math.round(rate)}%`;
+            el.statTarget1.innerText = formatWon(emp.target1);
+            el.statTarget2.innerText = formatWon(emp.target2);
+            el.statAchieved.innerText = formatWon(emp.current);
+            
+            const rem = emp.target2 - emp.current;
+            el.statRemaining.innerText = rem > 0 ? formatWon(rem) : '달성 완료';
+            el.statRemaining.className = `text-sm font-bold ${rem > 0 ? 'text-red-500' : 'text-green-600'}`;
+
+            renderHistoryList(emp);
+            renderTrendChart(emp); 
+        }
+
+        function renderHistoryList(emp) {
+            if (emp.history.length === 0) {
+                el.historyList.innerHTML = '<div class="text-center py-4 text-slate-400 text-sm">실적 기록이 없습니다.</div>';
+            } else {
+                el.historyList.innerHTML = [...emp.history].reverse().map((item, idx) => {
+                    const originalIdx = emp.history.length - 1 - idx;
+                    const displayDate = item.date.split('-').slice(1).map(Number).join('/');
+                    return `
+                        <div class="history-item flex justify-between items-center group">
+                            <div>
+                                <div class="text-[10px] text-slate-400 mb-0.5">${displayDate}</div>
+                                <div class="text-sm font-bold text-blue-600">+${formatWon(item.amount)}</div>
+                                <div class="text-[10px] text-slate-400">당시 누적: ${formatWon(item.totalAfter)}</div>
+                            </div>
+                            <div class="flex gap-2 pr-2">
+                                <button onclick="openHistoryEditModal(${originalIdx})" class="text-slate-300 hover:text-blue-500 transition-colors p-2">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="openHistoryDeleteModal(${originalIdx})" class="text-slate-300 hover:text-red-500 transition-colors p-2">
+                                    <i class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        function renderTrendChart(emp) {
+            if (trendChart) trendChart.destroy();
+            const ctx = el.trendChartCanvas.getContext('2d');
+            const labels = [];
+            for (let d = 2; d <= 26; d++) { labels.push(d); }
+            const dataPoints = labels.map(dayNum => {
+                const targetDateStr = `2026-02-${dayNum.toString().padStart(2, '0')}`;
+                const targetDate = new Date(targetDateStr);
+                const validEntriesSum = emp.history
+                    .filter(h => new Date(h.date) <= targetDate)
+                    .reduce((sum, h) => sum + h.amount, 0);
+                return validEntriesSum;
+            });
+            const target1Line = labels.map(() => emp.target1);
+            const target2Line = labels.map(() => emp.target2);
+
+            trendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: '누적 실적', data: dataPoints, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)', borderWidth: 2, fill: true, tension: 0.15, pointRadius: 0, hoverRadius: 0, zIndex: 10 },
+                        { label: '1차 목표', data: target1Line, borderColor: '#22c55e', borderWidth: 2, fill: false, pointRadius: 0, zIndex: 5 },
+                        { label: '2차 목표', data: target2Line, borderColor: '#f59e0b', borderWidth: 2, fill: false, pointRadius: 0, zIndex: 4 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10, weight: '600' }, boxWidth: 10 } }, tooltip: { callbacks: { title: (ctx) => `2월 ${ctx[0].label}일`, label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}원` } } },
+                    scales: { y: { beginAtZero: true, max: emp.target2 > 0 ? emp.target2 : 1000000, ticks: { font: { size: 10 }, callback: (v) => v.toLocaleString() }, grid: { color: '#f1f5f9' } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+                }
+            });
+        }
+
+        window.openDeleteModal = (id) => { pendingDeleteId = id; el.confirmModal.style.display = 'flex'; };
+        document.getElementById('modal-cancel').onclick = () => el.confirmModal.style.display = 'none';
+        document.getElementById('modal-confirm').onclick = () => {
+            employees = employees.filter(e => e.id !== pendingDeleteId);
+            if (selectedId === pendingDeleteId) { selectedId = null; el.detailDashboard.classList.add('hidden'); el.emptyState.classList.remove('hidden'); }
+            saveData(); renderList(); el.confirmModal.style.display = 'none'; showToast('삭제되었습니다.');
+        };
+
+        document.getElementById('history-edit-cancel').onclick = () => el.historyEditModal.style.display = 'none';
+        document.getElementById('history-delete-cancel').onclick = () => el.historyDeleteModal.style.display = 'none';
+
+        document.getElementById('add-emp-btn').onclick = () => {
+            const nameInput = document.getElementById('new-emp-name');
+            const name = nameInput.value.trim();
+            if (!name) return showToast('이름을 입력하세요.');
+            const newEmp = { id: Date.now(), name, target1: 1000000, target2: 1200000, current: 0, history: [] };
+            employees.push(newEmp); saveData(); nameInput.value = ''; renderList(); selectEmployee(newEmp.id); showToast('추가되었습니다.');
+        };
+
+        document.getElementById('add-perf-btn').onclick = () => {
+            if (!selectedId) return;
+            const val = parseInt(el.addValueInput.value);
+            const selectedDate = el.addDateInput.value;
+            if (!selectedDate) return showToast('날짜를 선택하세요.');
+            if (isNaN(val) || val <= 0) return showToast('금액을 입력하세요.');
+            const emp = employees.find(e => e.id === selectedId);
+            emp.history.push({ date: selectedDate, amount: val, totalAfter: 0 });
+            saveData(); el.addValueInput.value = ''; updateDetailUI(emp); renderList(); showToast('반영되었습니다.');
+        };
+
+        document.getElementById('set-goals-btn').onclick = () => {
+            if (!selectedId) return;
+            const t1 = parseInt(document.getElementById('target1-input').value);
+            const t2 = parseInt(document.getElementById('target2-input').value);
+            if (isNaN(t1) || t2 <= t1) return showToast('2차 목표가 1차보다 커야 합니다.');
+            const emp = employees.find(e => e.id === selectedId);
+            emp.target1 = t1; emp.target2 = t2; saveData(); updateDetailUI(emp); renderList(); showToast('저장되었습니다.');
+        };
+
+        document.getElementById('reset-btn').onclick = () => {
+            if (!selectedId) return;
+            if (!confirm("모든 실적 데이터를 초기화하시겠습니까?")) return;
+            const emp = employees.find(e => e.id === selectedId);
+            emp.current = 0; emp.history = []; saveData(); updateDetailUI(emp); renderList(); showToast('초기화되었습니다.');
+        };
+
+        document.getElementById('delete-emp-btn').onclick = () => openDeleteModal(selectedId);
+
+        window.onload = renderList;
+    </script>
+</body>
+</html>
