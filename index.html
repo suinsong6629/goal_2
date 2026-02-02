@@ -59,11 +59,12 @@
             transition: all 0.2s;
             cursor: pointer;
             position: relative;
+            min-width: 200px;
         }
 
         .employee-item.active {
-            background-color: #eff6ff; /* 블루 톤으로 원복 */
-            border-color: #3b82f6; /* 블루 톤으로 원복 */
+            background-color: #eff6ff;
+            border-color: #3b82f6;
         }
 
         .list-delete-btn {
@@ -77,6 +78,7 @@
 
         .custom-scroll::-webkit-scrollbar {
             width: 6px;
+            height: 6px;
         }
         .custom-scroll::-webkit-scrollbar-thumb {
             background: #cbd5e1;
@@ -97,7 +99,7 @@
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.5);
-            z-index: 500;
+            z-index: 900;
             align-items: center;
             justify-content: center;
         }
@@ -125,9 +127,9 @@
     </style>
 </head>
 <body class="p-4 md:p-6">
-    <div class="max-w-6xl mx-auto">
+    <div class="max-w-6xl mx-auto space-y-6">
         <!-- 상단 요약 대시보드 -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="card p-5 border-l-4 border-blue-500">
                 <div class="text-slate-500 text-sm font-medium">전체 합산 실적</div>
                 <div class="text-2xl font-bold text-slate-800" id="summary-total-perf">0원</div>
@@ -142,143 +144,142 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            <!-- 왼쪽: 직원 리스트 -->
-            <div class="lg:col-span-4 flex flex-col gap-4">
-                <div class="card p-5 flex flex-col h-[750px]">
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="font-bold text-slate-700 flex items-center gap-2">
-                            <i class="fa-solid fa-users text-blue-500"></i> 설계사 리스트
-                        </h2>
-                    </div>
-                    
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="new-emp-name" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500" placeholder="이름 입력">
-                        <button id="add-emp-btn" class="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-bold hover:bg-blue-700">추가</button>
-                    </div>
+        <!-- 설계사 리스트 대시보드 (가로 전체 영역 사용) -->
+        <div class="card p-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                <h2 class="font-bold text-slate-700 flex items-center gap-2 text-lg">
+                    <i class="fa-solid fa-users text-blue-500"></i> 설계사 리스트
+                </h2>
+                <div class="flex gap-2 max-w-sm w-full">
+                    <input type="text" id="new-emp-name" class="flex-1 p-2 border border-slate-200 rounded-lg text-sm outline-none focus:border-blue-500" placeholder="신규 설계사 이름 입력">
+                    <button id="add-emp-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-blue-700 whitespace-nowrap">추가</button>
+                </div>
+            </div>
+            
+            <!-- 리스트 가로 스크롤 영역 -->
+            <div id="employee-list" class="flex overflow-x-auto gap-4 pb-4 custom-scroll min-h-[120px]">
+                <div class="text-center w-full py-8 text-slate-400 text-sm">등록된 설계사가 없습니다.</div>
+            </div>
+        </div>
 
-                    <div id="employee-list" class="flex-1 overflow-y-auto custom-scroll flex flex-col gap-2 pr-1"></div>
+        <!-- 하단: 상세 대시보드 (선택 시 나타남) -->
+        <div id="empty-state" class="card p-16 flex flex-col items-center justify-center text-center">
+            <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                <i class="fa-solid fa-user-check text-3xl text-slate-300"></i>
+            </div>
+            <h3 class="text-xl font-bold text-slate-700 mb-2">상세 정보를 보려면 설계사를 선택해주세요</h3>
+            <p class="text-slate-400">위 리스트에서 실적을 관리할 설계사를 클릭하세요.</p>
+        </div>
+
+        <div id="detail-dashboard" class="hidden space-y-6 animate-fade-in pb-10">
+            <!-- 그래프 및 통계 카드 -->
+            <div class="card p-6">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800" id="detail-name">홍길동</h2>
+                        <p class="text-sm text-slate-400">개별 실적 상세 현황 (2026년 2월)</p>
+                    </div>
+                    <button id="delete-emp-btn" class="text-slate-300 hover:text-red-500 transition px-2 py-1">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-end mb-10">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">현재 달성액</span>
+                        <div class="text-4xl font-black text-blue-600 mt-1" id="display-current">0원</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">최종 목표 달성률</span>
+                        <div class="text-2xl font-bold text-slate-700 mt-1" id="display-percentage">0%</div>
+                    </div>
+                </div>
+
+                <div class="mb-4 pt-6">
+                    <div class="progress-container">
+                        <div id="progress-bar" class="progress-bar"></div>
+                        <div id="marker1" class="target-marker"><span class="target-label">1차</span></div>
+                        <div id="marker2" class="target-marker"><span class="target-label">2차</span></div>
+                    </div>
+                </div>
+
+                <div id="trend-chart-container" class="mb-10 w-full h-80 bg-slate-50 rounded-xl p-4 border border-slate-100">
+                    <canvas id="trendChart"></canvas>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-slate-100 text-center">
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-bold mb-1 uppercase">1차 목표 실적</div>
+                        <div class="text-sm font-bold text-slate-700" id="stat-target1">0원</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-bold mb-1 uppercase">2차 목표 실적</div>
+                        <div class="text-sm font-bold text-slate-700" id="stat-target2">0원</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-bold mb-1 uppercase">달성 실적 합계</div>
+                        <div class="text-sm font-bold text-blue-600" id="stat-achieved">0원</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400 font-bold mb-1 uppercase">최종 목표까지</div>
+                        <div class="text-sm font-bold text-red-500" id="stat-remaining">0원</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 오른쪽: 상세 대시보드 -->
-            <div class="lg:col-span-8">
-                <div id="empty-state" class="card h-full flex flex-col items-center justify-center p-12 text-center">
-                    <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                        <i class="fa-solid fa-user-check text-3xl text-slate-300"></i>
+            <!-- 관리 액션 카드 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 실적 추가 -->
+                <div class="card p-6">
+                    <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-coins text-yellow-500"></i> 실적 합산 추가
+                    </h3>
+                    <div class="flex flex-col gap-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input type="date" id="add-date-input" class="w-full p-2 border border-slate-200 rounded-lg text-xs md:text-sm outline-none focus:border-blue-500">
+                            <input type="number" id="add-value-input" class="w-full p-2 border border-slate-200 rounded-lg text-xs md:text-sm outline-none focus:border-blue-500" placeholder="금액 입력">
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="add-perf-btn" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-blue-700">실적 누적하기</button>
+                            <button id="reset-btn" class="px-4 py-2 border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50" title="실적 초기화"><i class="fa-solid fa-rotate-left"></i></button>
+                        </div>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-700 mb-2">설계사를 선택해주세요</h3>
-                    <p class="text-slate-400">왼쪽 리스트에서 실적을 관리할 설계사를 클릭하세요.</p>
                 </div>
-
-                <div id="detail-dashboard" class="hidden space-y-6 animate-fade-in">
-                    <div class="card p-6">
-                        <div class="flex justify-between items-start mb-6">
-                            <div>
-                                <h2 class="text-2xl font-black text-slate-800" id="detail-name">홍길동</h2>
-                                <p class="text-sm text-slate-400">개별 실적 상세 현황 (2026년 2월)</p>
-                            </div>
-                            <button id="delete-emp-btn" class="text-slate-300 hover:text-red-500 transition px-2 py-1">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </div>
-
-                        <div class="flex justify-between items-end mb-10">
-                            <div>
-                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">현재 달성액</span>
-                                <div class="text-4xl font-black text-blue-600 mt-1" id="display-current">0원</div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">최종 목표 달성률</span>
-                                <div class="text-2xl font-bold text-slate-700 mt-1" id="display-percentage">0%</div>
-                            </div>
-                        </div>
-
-                        <div class="mb-4 pt-6">
-                            <div class="progress-container">
-                                <div id="progress-bar" class="progress-bar"></div>
-                                <div id="marker1" class="target-marker"><span class="target-label">1차</span></div>
-                                <div id="marker2" class="target-marker"><span class="target-label">2차</span></div>
-                            </div>
-                        </div>
-
-                        <div id="trend-chart-container" class="mb-10 w-full h-72 bg-slate-50 rounded-xl p-4 border border-slate-100">
-                            <canvas id="trendChart"></canvas>
-                        </div>
-
-                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-slate-100 text-center">
-                            <div>
-                                <div class="text-[10px] text-slate-400 font-bold mb-1">1차 목표</div>
-                                <div class="text-sm font-bold text-slate-700" id="stat-target1">0원</div>
-                            </div>
-                            <div>
-                                <div class="text-[10px] text-slate-400 font-bold mb-1">2차 목표</div>
-                                <div class="text-sm font-bold text-slate-700" id="stat-target2">0원</div>
-                            </div>
-                            <div>
-                                <div class="text-[10px] text-slate-400 font-bold mb-1">달성 실적</div>
-                                <div class="text-sm font-bold text-blue-600" id="stat-achieved">0원</div>
-                            </div>
-                            <div>
-                                <div class="text-[10px] text-slate-400 font-bold mb-1">부족 실적</div>
-                                <div class="text-sm font-bold text-red-500" id="stat-remaining">0원</div>
-                            </div>
-                        </div>
+                <!-- 목표 수정 -->
+                <div class="card p-6">
+                    <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-bullseye text-red-500"></i> 목표 변경
+                    </h3>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <input type="number" id="target1-input" class="p-2 border border-slate-200 rounded-lg text-sm outline-none" placeholder="1차 목표">
+                        <input type="number" id="target2-input" class="p-2 border border-slate-200 rounded-lg text-sm outline-none" placeholder="2차 목표">
                     </div>
+                    <button id="set-goals-btn" class="w-full bg-slate-800 text-white py-2 rounded-lg font-bold text-sm hover:bg-slate-700">설정 적용</button>
+                </div>
+            </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- 실적 추가 섹션 -->
-                        <div class="card p-6">
-                            <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                                <i class="fa-solid fa-coins text-yellow-500"></i> 실적 합산 추가
-                            </h3>
-                            <div class="flex flex-col gap-3">
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                    <input type="date" id="add-date-input" class="w-full p-2 border border-slate-200 rounded-lg text-xs md:text-sm outline-none focus:border-blue-500">
-                                    <input type="number" id="add-value-input" class="w-full p-2 border border-slate-200 rounded-lg text-xs md:text-sm outline-none focus:border-blue-500" placeholder="금액 입력">
-                                </div>
-                                <div class="flex gap-2">
-                                    <button id="add-perf-btn" class="flex-1 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-blue-700">실적 누적하기</button>
-                                    <button id="reset-btn" class="px-4 py-2 border border-slate-200 text-slate-500 rounded-lg hover:bg-slate-50" title="실적 초기화"><i class="fa-solid fa-rotate-left"></i></button>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- 목표 설정 섹션 -->
-                        <div class="card p-6">
-                            <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
-                                <i class="fa-solid fa-bullseye text-red-500"></i> 목표 변경
-                            </h3>
-                            <div class="grid grid-cols-2 gap-2 mb-3">
-                                <input type="number" id="target1-input" class="p-2 border border-slate-200 rounded-lg text-sm outline-none" placeholder="1차 목표">
-                                <input type="number" id="target2-input" class="p-2 border border-slate-200 rounded-lg text-sm outline-none" placeholder="2차 목표">
-                            </div>
-                            <button id="set-goals-btn" class="w-full bg-slate-800 text-white py-2 rounded-lg font-bold text-sm hover:bg-slate-700">설정 적용</button>
-                        </div>
-                    </div>
-
-                    <div class="card p-6">
-                        <h3 class="font-bold text-slate-700 mb-4 flex items-center justify-between">
-                            <span class="flex items-center gap-2">
-                                <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> 누적 실적 이력
-                            </span>
-                        </h3>
-                        <div id="performance-history" class="max-h-64 overflow-y-auto custom-scroll flex flex-col">
-                            <div class="text-center py-4 text-slate-400 text-sm">실적 기록이 없습니다.</div>
-                        </div>
-                    </div>
+            <!-- 실적 이력 -->
+            <div class="card p-6">
+                <h3 class="font-bold text-slate-700 mb-4 flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-slate-400"></i> 누적 실적 이력
+                    </span>
+                </h3>
+                <div id="performance-history" class="max-h-64 overflow-y-auto custom-scroll flex flex-col">
+                    <div class="text-center py-4 text-slate-400 text-sm">실적 기록이 없습니다.</div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Toast 알림 -->
-    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full opacity-0 pointer-events-none transition-opacity duration-300 shadow-xl z-[999]">
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full opacity-0 pointer-events-none transition-opacity duration-300 shadow-xl z-[1000]">
         메시지
     </div>
 
     <!-- 모달 1: 설계사 삭제 확인 -->
     <div id="confirm-modal" class="modal-overlay">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 text-center">
             <h3 class="text-lg font-bold text-slate-800 mb-2">정말 삭제하시겠습니까?</h3>
             <p class="text-slate-500 text-sm mb-6">해당 설계사의 모든 실적 데이터가 영구적으로 삭제됩니다.</p>
             <div class="flex gap-3">
@@ -291,7 +292,7 @@
     <!-- 모달 2: 실적 이력 수정 -->
     <div id="history-edit-modal" class="modal-overlay">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
-            <h3 class="text-lg font-bold text-slate-800 mb-4">실적 금액 수정</h3>
+            <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">실적 금액 수정</h3>
             <input type="number" id="edit-history-input" class="w-full p-3 border border-slate-200 rounded-xl mb-6 outline-none focus:border-blue-500" placeholder="금액 입력">
             <div class="flex gap-3">
                 <button id="history-edit-cancel" class="flex-1 py-2 bg-slate-100 text-slate-600 rounded-lg font-bold">취소</button>
@@ -302,7 +303,7 @@
 
     <!-- 모달 3: 이력 개별 삭제 확인 -->
     <div id="history-delete-modal" class="modal-overlay">
-        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full mx-4 text-center">
             <h3 class="text-lg font-bold text-slate-800 mb-2">이력을 삭제하시겠습니까?</h3>
             <p class="text-slate-500 text-sm mb-6">선택한 실적 이력이 삭제되며 전체 합계가 재계산됩니다.</p>
             <div class="flex gap-3">
@@ -313,14 +314,14 @@
     </div>
 
     <script>
-        // State
+        // --- State Management ---
         let employees = JSON.parse(localStorage.getItem('ems_employees')) || [];
         let selectedId = null;
         let pendingDeleteId = null;
         let pendingHistoryIdx = null;
         let trendChart = null; 
 
-        // DOM
+        // --- DOM Elements ---
         const el = {
             list: document.getElementById('employee-list'),
             emptyState: document.getElementById('empty-state'),
@@ -348,10 +349,12 @@
             addValueInput: document.getElementById('add-value-input')
         };
 
+        // Initialize default date to Feb 2, 2026
         el.addDateInput.value = '2026-02-02';
 
+        // --- Utilities ---
         function saveData() { localStorage.setItem('ems_employees', JSON.stringify(employees)); }
-        function formatWon(val) { return val.toLocaleString() + '원'; }
+        function formatWon(val) { return (val || 0).toLocaleString() + '원'; }
         function showToast(msg) {
             el.toast.innerText = msg;
             el.toast.style.opacity = '1';
@@ -359,8 +362,9 @@
         }
 
         function updateSummary() {
-            const total = employees.reduce((sum, emp) => sum + emp.current, 0);
-            const avg = employees.length > 0 
+            const total = employees.reduce((sum, emp) => sum + (emp.current || 0), 0);
+            const validEmps = employees.filter(e => e.target2 > 0);
+            const avg = validEmps.length > 0 
                 ? employees.reduce((sum, emp) => sum + (emp.target2 > 0 ? (emp.current / emp.target2 * 100) : 0), 0) / employees.length 
                 : 0;
             el.totalPerf.innerText = formatWon(total);
@@ -370,31 +374,33 @@
 
         function renderList() {
             el.list.innerHTML = '';
-            employees.forEach(emp => {
-                const rate = emp.target2 > 0 ? Math.round((emp.current / emp.target2) * 100) : 0;
-                const isActive = emp.id === selectedId;
-                const item = document.createElement('div');
-                // 활성화 시 강조색 블루로 복귀
-                item.className = `employee-item p-4 border border-slate-100 rounded-xl bg-white shadow-sm hover:border-blue-300 ${isActive ? 'active shadow-md ring-1 ring-blue-500' : ''}`;
-                
-                // 디자인 수정: 수치 텍스트는 블루로 복구, 채워지는 막대(bg-red-500)만 빨간색 유지
-                item.innerHTML = `
-                    <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-slate-700 text-sm">${emp.name}</span>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs font-bold text-blue-600">${rate}%</span>
-                            <button class="list-delete-btn text-slate-300 hover:text-red-500 transition px-1" onclick="event.stopPropagation(); openDeleteModal(${emp.id})">
-                                <i class="fa-solid fa-trash-can text-[10px]"></i>
-                            </button>
+            if (employees.length === 0) {
+                el.list.innerHTML = '<div class="text-center w-full py-8 text-slate-400 text-sm">등록된 설계사가 없습니다.</div>';
+            } else {
+                employees.forEach(emp => {
+                    const rate = emp.target2 > 0 ? Math.round((emp.current / emp.target2) * 100) : 0;
+                    const isActive = emp.id === selectedId;
+                    const item = document.createElement('div');
+                    item.className = `employee-item flex-none w-64 p-4 border border-slate-100 rounded-xl bg-white shadow-sm hover:border-blue-300 ${isActive ? 'active shadow-md ring-1 ring-blue-500' : ''}`;
+                    
+                    item.innerHTML = `
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="font-bold text-slate-700 text-sm truncate pr-2">${emp.name}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-blue-600">${rate}%</span>
+                                <button class="list-delete-btn text-slate-300 hover:text-red-500 transition px-1" onclick="event.stopPropagation(); openDeleteModal(${emp.id})">
+                                    <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div class="h-full bg-red-500" style="width: ${Math.min(rate, 100)}%"></div>
-                    </div>
-                `;
-                item.onclick = () => selectEmployee(emp.id);
-                el.list.appendChild(item);
-            });
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="h-full bg-red-500" style="width: ${Math.min(rate, 100)}%"></div>
+                        </div>
+                    `;
+                    item.onclick = () => selectEmployee(emp.id);
+                    el.list.appendChild(item);
+                });
+            }
             updateSummary();
         }
 
@@ -474,11 +480,14 @@
             }
         }
 
+        // --- Chart Rendering ---
         function renderTrendChart(emp) {
             if (trendChart) trendChart.destroy();
             const ctx = el.trendChartCanvas.getContext('2d');
+            
             const labels = [];
             for (let d = 2; d <= 26; d++) { labels.push(d); }
+
             const dataPoints = labels.map(dayNum => {
                 const targetDateStr = `2026-02-${dayNum.toString().padStart(2, '0')}`;
                 const targetDate = new Date(targetDateStr);
@@ -487,6 +496,7 @@
                     .reduce((sum, h) => sum + h.amount, 0);
                 return validEntriesSum;
             });
+
             const target1Line = labels.map(() => emp.target1);
             const target2Line = labels.map(() => emp.target2);
 
@@ -495,46 +505,68 @@
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: '누적 실적', data: dataPoints, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)', borderWidth: 2, fill: true, tension: 0.15, pointRadius: 0, hoverRadius: 0, zIndex: 10 },
-                        { label: '1차 목표', data: target1Line, borderColor: '#22c55e', borderWidth: 2, fill: false, pointRadius: 0, zIndex: 5 },
-                        { label: '2차 목표', data: target2Line, borderColor: '#f59e0b', borderWidth: 2, fill: false, pointRadius: 0, zIndex: 4 }
+                        { label: '누적 실적 현황', data: dataPoints, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.05)', borderWidth: 2, fill: true, tension: 0.15, pointRadius: 0, hoverRadius: 4, zIndex: 10 },
+                        { label: '1차 목표 구간', data: target1Line, borderColor: '#22c55e', borderWidth: 2, fill: false, pointRadius: 0, zIndex: 5 },
+                        { label: '2차 목표 구간', data: target2Line, borderColor: '#f59e0b', borderWidth: 2, fill: false, pointRadius: 0, zIndex: 4 }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10, weight: '600' }, boxWidth: 10 } }, tooltip: { callbacks: { title: (ctx) => `2월 ${ctx[0].label}일`, label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}원` } } },
-                    scales: { y: { beginAtZero: true, max: emp.target2 > 0 ? emp.target2 : 1000000, ticks: { font: { size: 10 }, callback: (v) => v.toLocaleString() }, grid: { color: '#f1f5f9' } }, x: { grid: { display: false }, ticks: { font: { size: 10 } } } }
+                    plugins: { legend: { display: true, position: 'top', labels: { font: { size: 10, weight: '600' }, boxWidth: 10 } } },
+                    scales: {
+                        y: { beginAtZero: true, max: emp.target2 > 0 ? emp.target2 : 1000000, ticks: { font: { size: 10 }, callback: (v) => v.toLocaleString() }, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                    }
                 }
             });
         }
 
+        // --- Handlers ---
         window.openDeleteModal = (id) => { pendingDeleteId = id; el.confirmModal.style.display = 'flex'; };
         document.getElementById('modal-cancel').onclick = () => el.confirmModal.style.display = 'none';
         document.getElementById('modal-confirm').onclick = () => {
             employees = employees.filter(e => e.id !== pendingDeleteId);
             if (selectedId === pendingDeleteId) { selectedId = null; el.detailDashboard.classList.add('hidden'); el.emptyState.classList.remove('hidden'); }
-            saveData(); renderList(); el.confirmModal.style.display = 'none'; showToast('삭제되었습니다.');
+            saveData(); renderList(); el.confirmModal.style.display = 'none'; showToast('설계사가 삭제되었습니다.');
         };
 
+        window.openHistoryEditModal = (idx) => {
+            const emp = employees.find(e => e.id === selectedId);
+            pendingHistoryIdx = idx;
+            document.getElementById('edit-history-input').value = emp.history[idx].amount;
+            el.historyEditModal.style.display = 'flex';
+        };
         document.getElementById('history-edit-cancel').onclick = () => el.historyEditModal.style.display = 'none';
+        document.getElementById('history-edit-confirm').onclick = () => {
+            const emp = employees.find(e => e.id === selectedId);
+            const newVal = parseInt(document.getElementById('edit-history-input').value);
+            if (isNaN(newVal) || newVal < 0) return showToast("금액을 확인하세요.");
+            emp.history[pendingHistoryIdx].amount = newVal;
+            saveData(); updateDetailUI(emp); renderList(); el.historyEditModal.style.display = 'none'; showToast("수정되었습니다.");
+        };
+
+        window.openHistoryDeleteModal = (idx) => { pendingHistoryIdx = idx; el.historyDeleteModal.style.display = 'flex'; };
         document.getElementById('history-delete-cancel').onclick = () => el.historyDeleteModal.style.display = 'none';
+        document.getElementById('history-delete-confirm').onclick = () => {
+            const emp = employees.find(e => e.id === selectedId);
+            emp.history.splice(pendingHistoryIdx, 1);
+            saveData(); updateDetailUI(emp); renderList(); el.historyDeleteModal.style.display = 'none'; showToast("삭제되었습니다.");
+        };
 
         document.getElementById('add-emp-btn').onclick = () => {
-            const nameInput = document.getElementById('new-emp-name');
-            const name = nameInput.value.trim();
+            const name = document.getElementById('new-emp-name').value.trim();
             if (!name) return showToast('이름을 입력하세요.');
             const newEmp = { id: Date.now(), name, target1: 1000000, target2: 1200000, current: 0, history: [] };
-            employees.push(newEmp); saveData(); nameInput.value = ''; renderList(); selectEmployee(newEmp.id); showToast('추가되었습니다.');
+            employees.push(newEmp); saveData(); document.getElementById('new-emp-name').value = ''; renderList(); selectEmployee(newEmp.id); showToast('추가되었습니다.');
         };
 
         document.getElementById('add-perf-btn').onclick = () => {
             if (!selectedId) return;
             const val = parseInt(el.addValueInput.value);
             const selectedDate = el.addDateInput.value;
-            if (!selectedDate) return showToast('날짜를 선택하세요.');
-            if (isNaN(val) || val <= 0) return showToast('금액을 입력하세요.');
+            if (!selectedDate || isNaN(val) || val <= 0) return showToast('날짜와 금액을 확인하세요.');
             const emp = employees.find(e => e.id === selectedId);
             emp.history.push({ date: selectedDate, amount: val, totalAfter: 0 });
             saveData(); el.addValueInput.value = ''; updateDetailUI(emp); renderList(); showToast('반영되었습니다.');
@@ -550,8 +582,7 @@
         };
 
         document.getElementById('reset-btn').onclick = () => {
-            if (!selectedId) return;
-            if (!confirm("모든 실적 데이터를 초기화하시겠습니까?")) return;
+            if (!selectedId || !confirm("초기화하시겠습니까?")) return;
             const emp = employees.find(e => e.id === selectedId);
             emp.current = 0; emp.history = []; saveData(); updateDetailUI(emp); renderList(); showToast('초기화되었습니다.');
         };
