@@ -143,7 +143,7 @@
             </div>
         </div>
 
-        <!-- 설계사 리스트 대시보드 (수정: 그리드 레이아웃 적용으로 가변 높이 대응) -->
+        <!-- 설계사 리스트 대시보드 (그리드 레이아웃) -->
         <div class="card p-6">
             <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                 <h2 class="font-bold text-slate-700 flex items-center gap-2 text-lg">
@@ -155,7 +155,7 @@
                 </div>
             </div>
             
-            <!-- 리스트 그리드 영역: 한 줄에 3개씩 배치 -->
+            <!-- 리스트 그리드 영역: 한 줄에 3개씩 배치 (수정: 달성률 순 정렬 반영) -->
             <div id="employee-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div class="text-center col-span-full py-8 text-slate-400 text-sm">등록된 설계사가 없습니다.</div>
             </div>
@@ -370,16 +370,23 @@
             el.summaryCount.innerText = `${employees.length}명`;
         }
 
+        // --- 렌더링 로직 (정렬 기능 추가) ---
         function renderList() {
             el.list.innerHTML = '';
             if (employees.length === 0) {
                 el.list.innerHTML = '<div class="text-center col-span-full py-8 text-slate-400 text-sm">등록된 설계사가 없습니다.</div>';
             } else {
-                employees.forEach(emp => {
+                // 수정: 달성률(rate)을 계산하여 내림차순 정렬한 복사본 생성
+                const sortedEmployees = [...employees].sort((a, b) => {
+                    const rateA = a.target2 > 0 ? (a.current / a.target2) : 0;
+                    const rateB = b.target2 > 0 ? (b.current / b.target2) : 0;
+                    return rateB - rateA; // 달성률 높은 순(내림차순)
+                });
+
+                sortedEmployees.forEach(emp => {
                     const rate = emp.target2 > 0 ? Math.round((emp.current / emp.target2) * 100) : 0;
                     const isActive = emp.id === selectedId;
                     const item = document.createElement('div');
-                    // 수정: 한 줄에 3개씩 배치하기 위해 flex-none 대신 그리드 셀 너비를 사용
                     item.className = `employee-item w-full p-4 border border-slate-100 rounded-xl bg-white shadow-sm hover:border-blue-300 ${isActive ? 'active shadow-md ring-1 ring-blue-500' : ''}`;
                     
                     item.innerHTML = `
@@ -415,7 +422,6 @@
             updateDetailUI(emp);
             renderList();
             
-            // 설계사 선택 시 상세 영역으로 부드럽게 스크롤
             setTimeout(() => {
                 el.detailDashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
@@ -484,14 +490,11 @@
             }
         }
 
-        // --- Chart Rendering ---
         function renderTrendChart(emp) {
             if (trendChart) trendChart.destroy();
             const ctx = el.trendChartCanvas.getContext('2d');
-            
             const labels = [];
             for (let d = 2; d <= 26; d++) { labels.push(d); }
-
             const dataPoints = labels.map(dayNum => {
                 const targetDateStr = `2026-02-${dayNum.toString().padStart(2, '0')}`;
                 const targetDate = new Date(targetDateStr);
@@ -500,7 +503,6 @@
                     .reduce((sum, h) => sum + h.amount, 0);
                 return validEntriesSum;
             });
-
             const target1Line = labels.map(() => emp.target1);
             const target2Line = labels.map(() => emp.target2);
 
