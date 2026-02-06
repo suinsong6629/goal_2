@@ -369,7 +369,7 @@
             el.summaryCount.innerText = `${employees.length}명`;
         }
 
-        // --- Render List (디자인 최종 수정 반영) ---
+        // --- Render List (디자인 수정 반영) ---
         function renderList() {
             el.list.innerHTML = '';
             if (employees.length === 0) {
@@ -389,16 +389,16 @@
                     
                     const gaugeColor = rate >= 50 ? 'bg-green-400' : 'bg-red-400';
 
-                    // 핵심 수정: 이름(좌)과 퍼센트(우)를 한 줄(row)에 수평 배치. 삭제 버튼은 이름 옆으로 이동.
+                    // 핵심 수정: 텍스트 사이즈 30% 축소 (text-2xl/3xl -> text-lg/xl, text-3xl/4xl -> text-2xl/3xl)
                     item.innerHTML = `
-                        <div class="flex justify-between items-center mb-4">
-                            <div class="flex items-center gap-3 overflow-hidden">
-                                <span class="font-bold text-slate-700 text-2xl md:text-3xl truncate tracking-tight">${emp.name}</span>
-                                <button class="list-delete-btn text-slate-200 hover:text-red-400 transition px-2 py-1 flex-shrink-0" onclick="event.stopPropagation(); openDeleteModal(${emp.id})">
-                                    <i class="fa-solid fa-trash-can text-lg"></i>
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-2 overflow-hidden">
+                                <span class="font-bold text-slate-700 text-lg md:text-xl truncate tracking-tight">${emp.name}</span>
+                                <button class="list-delete-btn text-slate-200 hover:text-red-400 transition px-1 py-1 flex-shrink-0" onclick="event.stopPropagation(); openDeleteModal(${emp.id})">
+                                    <i class="fa-solid fa-trash-can text-base"></i>
                                 </button>
                             </div>
-                            <span class="text-3xl md:text-4xl font-semibold text-blue-500 tabular-nums leading-none flex-shrink-0">${rate}%</span>
+                            <span class="text-2xl md:text-3xl font-semibold text-blue-500 tabular-nums leading-none flex-shrink-0">${rate}%</span>
                         </div>
                         <div class="w-full bg-slate-50 h-2.5 rounded-full overflow-hidden shadow-inner">
                             <div class="h-full ${gaugeColor} rounded-full" style="width: ${Math.min(rate, 100)}%"></div>
