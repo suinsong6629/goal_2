@@ -369,7 +369,7 @@
             el.summaryCount.innerText = `${employees.length}명`;
         }
 
-        // --- Render List (여백 50% 축소 수정 반영) ---
+        // --- Render List (뱃지 추가 수정) ---
         function renderList() {
             el.list.innerHTML = '';
             if (employees.length === 0) {
@@ -385,16 +385,21 @@
                     const rate = emp.target2 > 0 ? Math.round((emp.current / emp.target2) * 100) : 0;
                     const isActive = emp.id === selectedId;
                     const item = document.createElement('div');
-                    // 수정: p-8 -> p-4 (여백 50% 축소)
                     item.className = `employee-item w-full p-4 border border-slate-100 rounded-[24px] bg-white shadow-sm hover:shadow-md ${isActive ? 'active ring-2 ring-blue-400 border-transparent' : ''}`;
                     
                     const gaugeColor = rate >= 50 ? 'bg-green-400' : 'bg-red-400';
+                    
+                    // 1차 목표 달성 여부 확인
+                    const isTarget1Achieved = emp.current >= emp.target1;
+                    const badgeHtml = isTarget1Achieved 
+                        ? `<span class="bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold flex-shrink-0 animate-fade-in"><i class="fa-solid fa-medal"></i> 1차</span>` 
+                        : '';
 
-                    // 수정: mb-4 -> mb-2 (내부 간격 축소)
                     item.innerHTML = `
                         <div class="flex justify-between items-center mb-2">
                             <div class="flex items-center gap-2 overflow-hidden">
                                 <span class="font-bold text-slate-700 text-lg md:text-xl truncate tracking-tight">${emp.name}</span>
+                                ${badgeHtml}
                                 <button class="list-delete-btn text-slate-200 hover:text-red-400 transition px-1 py-1 flex-shrink-0" onclick="event.stopPropagation(); openDeleteModal(${emp.id})">
                                     <i class="fa-solid fa-trash-can text-base"></i>
                                 </button>
