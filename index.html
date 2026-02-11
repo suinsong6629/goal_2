@@ -419,17 +419,22 @@
                 el.list.innerHTML = '<div class="text-center col-span-full py-12 text-slate-300 text-lg italic font-medium">등록된 설계사가 없습니다.</div>';
             } else {
                 const sortedEmployees = [...employees].sort((a, b) => {
-                    const rateA = a.target2 > 0 ? (a.current / a.target2) : 0;
-                    const rateB = b.target2 > 0 ? (b.current / b.target2) : 0;
+                    const rateA = Number(a.target2) > 0 ? (Number(a.current) / Number(a.target2)) : 0;
+                    const rateB = Number(b.target2) > 0 ? (Number(b.current) / Number(b.target2)) : 0;
                     return rateB - rateA;
                 });
 
                 sortedEmployees.forEach(emp => {
-                    const rate = emp.target2 > 0 ? Math.round((emp.current / emp.target2) * 100) : 0;
+                    // 데이터 숫자로 확실하게 변환
+                    const current = Number(emp.current);
+                    const target1 = Number(emp.target1);
+                    const target2 = Number(emp.target2);
+                    
+                    const rate = target2 > 0 ? Math.round((current / target2) * 100) : 0;
                     const isActive = emp.id === selectedId;
                     
-                    const isTarget2Achieved = emp.current >= emp.target2;
-                    const isTarget1Achieved = emp.current >= emp.target1;
+                    const isTarget2Achieved = current >= target2;
+                    const isTarget1Achieved = current >= target1;
 
                     // 카드 스타일 동적 적용 (2차 달성 시 다크모드)
                     let cardClasses = `employee-item w-full p-4 border rounded-[24px] shadow-sm hover:shadow-md transition-all duration-300 `;
@@ -518,42 +523,33 @@
         }
 
         function updateDetailUI(emp) {
-            // 숫자 변환 및 재계산 보장
-            emp.target1 = Number(emp.target1);
-            emp.target2 = Number(emp.target2);
-            emp.history.sort((a, b) => new Date(a.date) - new Date(b.date));
-            let cumulative = 0;
-            emp.history.forEach(h => {
-                cumulative += Number(h.amount);
-                h.totalAfter = cumulative;
-            });
-            emp.current = cumulative;
+            // 상세 화면에서도 숫자 변환 보장
+            const current = Number(emp.current);
+            const target1 = Number(emp.target1);
+            const target2 = Number(emp.target2);
 
-            const rate = emp.target2 > 0 ? (emp.current / emp.target2) * 100 : 0;
-            const marker1Pos = emp.target2 > 0 ? (emp.target1 / emp.target2) * 100 : 0;
+            const rate = target2 > 0 ? (current / target2) * 100 : 0;
+            const marker1Pos = target2 > 0 ? (target1 / target2) * 100 : 0;
 
             el.progressBar.style.width = `${Math.min(rate, 100)}%`;
             el.progressBar.className = 'progress-bar'; 
             
             // 상세 대시보드 게이지 색상 로직 통일 (빨강 -> 초록 -> 노랑)
-            // (이전 코드에서 잘못된 부분 수정됨)
-            if (emp.current >= emp.target2) el.progressBar.classList.add('bg-yellow-400');
-            else if (emp.current >= emp.target1) el.progressBar.classList.add('bg-green-400');
+            if (current >= target2) el.progressBar.classList.add('bg-yellow-400');
+            else if (current >= target1) el.progressBar.classList.add('bg-green-400');
             else el.progressBar.classList.add('bg-red-400');
             
             el.marker1.style.left = `${marker1Pos}%`;
             el.marker2.style.left = `100%`;
 
-            el.displayCurrent.innerText = formatWon(emp.current);
+            el.displayCurrent.innerText = formatWon(current);
             el.displayPercentage.innerText = `${Math.round(rate)}%`;
-            el.statTarget1.innerText = formatWon(emp.target1);
-            el.statTarget2.innerText = formatWon(emp.target2);
-            el.statAchieved.innerText = formatWon(emp.current);
+            el.statTarget1.innerText = formatWon(target1);
+            el.statTarget2.innerText = formatWon(target2);
+            el.statAchieved.innerText = formatWon(current);
             
-            const rem = emp.target2 - emp.current;
+            const rem = target2 - current;
             el.statRemaining.innerText = rem > 0 ? formatWon(rem) : '달성 완료';
-            // 달성 완료 시 색상도 2차 달성(보라/노랑) 톤으로 가는게 좋겠지만 
-            // 여기선 기존 텍스트 로직 유지하되 게이지바는 위에서 통일함
             el.statRemaining.className = `text-lg font-bold ${rem > 0 ? 'text-red-400' : 'text-green-500'}`;
 
             renderHistoryList(emp);
@@ -694,6 +690,7 @@
         document.getElementById('delete-emp-btn').onclick = () => openDeleteModal(selectedId);
         document.getElementById('refresh-btn').onclick = recalculateAllData;
 
+        // Auto-refresh on load to fix sync issues
         window.onload = () => {
             recalculateAllData();
         };
