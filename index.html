@@ -16,12 +16,6 @@
             color: #334155;
         }
 
-        /* 2차 목표 달성 시 후광 효과 (Gold Halo) */
-        .gold-halo {
-            box-shadow: 0 0 15px rgba(251, 191, 36, 0.6); /* Amber glow */
-            border: 1px solid #f59e0b; /* Amber border */
-        }
-
         .progress-container {
             position: relative;
             height: 32px;
@@ -413,7 +407,7 @@
             el.summaryCount.innerText = `${employees.length}명`;
         }
 
-        // --- Render List ---
+        // --- Render List (퍼센트 기준 색상 로직 적용) ---
         function renderList() {
             el.list.innerHTML = '';
             if (employees.length === 0) {
@@ -436,7 +430,7 @@
                     const isTarget2Achieved = current >= target2;
                     const isTarget1Achieved = current >= target1;
 
-                    // 카드 스타일 (2차 달성 시 금메달 테마)
+                    // 카드 스타일 (2차 달성 시 다크모드)
                     let cardClasses = `employee-item w-full p-4 border rounded-[24px] shadow-sm hover:shadow-md transition-all duration-300 `;
                     let nameClass = "font-bold text-lg md:text-xl truncate tracking-tight ";
                     let percentClass = "text-2xl md:text-3xl font-semibold tabular-nums leading-none flex-shrink-0 ";
@@ -444,36 +438,34 @@
                     let trackClass = "w-full h-2.5 rounded-full overflow-hidden shadow-inner ";
 
                     if (isTarget2Achieved) {
-                        // 2차 달성 - 금메달 테마 적용
-                        cardClasses += "bg-yellow-50 gold-halo"; // 배경: 연한 노랑, 효과: 골드 후광
-                        if (isActive) cardClasses += " ring-2 ring-yellow-400 border-transparent";
-                        else cardClasses += " border-yellow-400"; // 기본 테두리도 골드
-                        
-                        nameClass += "text-yellow-900"; // 진한 갈색/금색 텍스트
-                        percentClass += "text-yellow-700"; 
-                        deleteBtnClass += "text-yellow-500 hover:text-red-500";
-                        trackClass += "bg-yellow-200";
+                        cardClasses += "bg-slate-800 border-slate-700";
+                        if (isActive) cardClasses += " ring-2 ring-blue-400 border-transparent";
+                        else cardClasses += " hover:bg-slate-700";
+                        nameClass += "text-white";
+                        percentClass += "text-blue-300"; 
+                        deleteBtnClass += "text-slate-500 hover:text-red-400";
+                        trackClass += "bg-slate-700";
                     } else {
-                        // 기본 스타일
                         cardClasses += "bg-white border-slate-100";
                         if (isActive) cardClasses += " active ring-2 ring-blue-400 border-transparent";
                         else cardClasses += " hover:border-blue-300";
-
                         nameClass += "text-slate-700";
                         percentClass += "text-blue-500";
                         deleteBtnClass += "text-slate-200 hover:text-red-400";
                         trackClass += "bg-slate-50";
                     }
 
-                    // 게이지 색상 로직: 빨강 -> 초록 -> 주황(2차 달성시)
+                    // *** 수정된 부분: 퍼센트(rate) 기준으로 게이지 색상 결정 ***
                     let gaugeColor = 'bg-red-400';
-                    if (isTarget2Achieved) {
-                        gaugeColor = 'bg-orange-500'; // 2차 달성 시 주황색 게이지
-                    } else if (isTarget1Achieved) {
-                        gaugeColor = 'bg-green-400';
+                    if (rate >= 100) {
+                        gaugeColor = 'bg-yellow-400'; // 100% 이상: 노랑
+                    } else if (rate >= 50) {
+                        gaugeColor = 'bg-green-400';  // 50% 이상: 초록
+                    } else {
+                        gaugeColor = 'bg-red-400';    // 50% 미만: 빨강
                     }
 
-                    // 뱃지
+                    // 뱃지 (기존 1차/2차 달성 로직 유지)
                     let badgeHtml = '';
                     if (isTarget2Achieved) {
                         badgeHtml = `<span class="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold flex-shrink-0 animate-fade-in"><i class="fa-solid fa-medal"></i> 2차</span>`;
@@ -533,9 +525,9 @@
             el.progressBar.style.width = `${Math.min(rate, 100)}%`;
             el.progressBar.className = 'progress-bar'; 
             
-            // 상세 대시보드도 동일한 색상 로직 적용
-            if (current >= target2) el.progressBar.classList.add('bg-yellow-400');
-            else if (current >= target1) el.progressBar.classList.add('bg-green-400');
+            // 상세 대시보드도 동일한 퍼센트 기준 색상 적용
+            if (rate >= 100) el.progressBar.classList.add('bg-yellow-400');
+            else if (rate >= 50) el.progressBar.classList.add('bg-green-400');
             else el.progressBar.classList.add('bg-red-400');
             
             el.marker1.style.left = `${marker1Pos}%`;
