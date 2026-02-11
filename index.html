@@ -62,6 +62,11 @@
             cursor: pointer;
         }
 
+        .employee-item.active {
+            background-color: #f0f7ff;
+            border-color: #bfdbfe;
+        }
+
         .list-delete-btn {
             opacity: 0;
             transition: opacity 0.2s;
@@ -375,13 +380,19 @@
             el.summaryCount.innerText = `${employees.length}명`;
         }
 
-        // --- Data Sync Logic ---
+        // --- Data Sync Logic (숫자 변환 강화) ---
         function recalculateAllData() {
             employees.forEach(emp => {
+                // Ensure targets are numbers
+                emp.target1 = Number(emp.target1);
+                emp.target2 = Number(emp.target2);
+
                 if (emp.history && Array.isArray(emp.history)) {
                     emp.history.sort((a, b) => new Date(a.date) - new Date(b.date));
                     let sum = 0;
                     emp.history.forEach(h => {
+                        // FORCE NUMBER TYPE
+                        h.amount = Number(h.amount);
                         sum += h.amount;
                         h.totalAfter = sum;
                     });
@@ -401,7 +412,7 @@
             showToast('데이터가 동기화되었습니다.');
         }
 
-        // --- Render List (이전 디자인 복구 + 2차 달성 다크모드) ---
+        // --- Render List ---
         function renderList() {
             el.list.innerHTML = '';
             if (employees.length === 0) {
@@ -434,11 +445,11 @@
                         else cardClasses += " hover:bg-slate-700";
                         
                         nameClass += "text-white";
-                        percentClass += "text-blue-300"; // 밝은 블루
+                        percentClass += "text-blue-300"; 
                         deleteBtnClass += "text-slate-500 hover:text-red-400";
                         trackClass += "bg-slate-700";
                     } else {
-                        // Light Mode (Blue Theme)
+                        // Light Mode
                         cardClasses += "bg-white border-slate-100";
                         if (isActive) cardClasses += " active ring-2 ring-blue-400 border-transparent";
                         else cardClasses += " hover:border-blue-300";
@@ -449,7 +460,7 @@
                         trackClass += "bg-slate-50";
                     }
 
-                    // 게이지 색상: 빨강 -> 초록 -> 노랑
+                    // 게이지 색상 로직: 빨강 -> 초록 -> 노랑
                     let gaugeColor = 'bg-red-400';
                     if (isTarget2Achieved) {
                         gaugeColor = 'bg-yellow-400';
@@ -468,7 +479,6 @@
                     const item = document.createElement('div');
                     item.className = cardClasses;
 
-                    // 레이아웃: 이름/뱃지/삭제버튼(좌측) --- 퍼센트(우측)
                     item.innerHTML = `
                         <div class="flex justify-between items-center mb-2">
                             <div class="flex items-center gap-2 overflow-hidden">
@@ -508,10 +518,13 @@
         }
 
         function updateDetailUI(emp) {
+            // 숫자 변환 및 재계산 보장
+            emp.target1 = Number(emp.target1);
+            emp.target2 = Number(emp.target2);
             emp.history.sort((a, b) => new Date(a.date) - new Date(b.date));
             let cumulative = 0;
             emp.history.forEach(h => {
-                cumulative += h.amount;
+                cumulative += Number(h.amount);
                 h.totalAfter = cumulative;
             });
             emp.current = cumulative;
@@ -521,9 +534,12 @@
 
             el.progressBar.style.width = `${Math.min(rate, 100)}%`;
             el.progressBar.className = 'progress-bar'; 
-            if (emp.current < emp.target1) el.progressBar.classList.add('bg-green-400');
-            else if (emp.current < emp.target2) el.progressBar.classList.add('bg-amber-400');
-            else el.progressBar.classList.add('bg-blue-400');
+            
+            // 상세 대시보드 게이지 색상 로직 통일 (빨강 -> 초록 -> 노랑)
+            // (이전 코드에서 잘못된 부분 수정됨)
+            if (emp.current >= emp.target2) el.progressBar.classList.add('bg-yellow-400');
+            else if (emp.current >= emp.target1) el.progressBar.classList.add('bg-green-400');
+            else el.progressBar.classList.add('bg-red-400');
             
             el.marker1.style.left = `${marker1Pos}%`;
             el.marker2.style.left = `100%`;
@@ -536,6 +552,8 @@
             
             const rem = emp.target2 - emp.current;
             el.statRemaining.innerText = rem > 0 ? formatWon(rem) : '달성 완료';
+            // 달성 완료 시 색상도 2차 달성(보라/노랑) 톤으로 가는게 좋겠지만 
+            // 여기선 기존 텍스트 로직 유지하되 게이지바는 위에서 통일함
             el.statRemaining.className = `text-lg font-bold ${rem > 0 ? 'text-red-400' : 'text-green-500'}`;
 
             renderHistoryList(emp);
@@ -580,7 +598,7 @@
                 const targetDate = new Date(targetDateStr);
                 const validEntriesSum = emp.history
                     .filter(h => new Date(h.date) <= targetDate)
-                    .reduce((sum, h) => sum + h.amount, 0);
+                    .reduce((sum, h) => sum + Number(h.amount), 0);
                 return validEntriesSum;
             });
             const target1Line = labels.map(() => emp.target1);
