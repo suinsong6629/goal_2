@@ -62,11 +62,6 @@
             cursor: pointer;
         }
 
-        /* 활성화 시 테두리 색상은 다크모드 여부와 관계없이 블루 링으로 통일하되 배경색은 JS에서 제어 */
-        .employee-item.active {
-            /* JS에서 배경색 처리하므로 여기선 링만 정의 */
-        }
-
         .list-delete-btn {
             opacity: 0;
             transition: opacity 0.2s;
@@ -406,7 +401,7 @@
             showToast('데이터가 동기화되었습니다.');
         }
 
-        // --- Render List (2차 달성 시 다크모드 적용) ---
+        // --- Render List (이전 디자인 복구 + 2차 달성 다크모드) ---
         function renderList() {
             el.list.innerHTML = '';
             if (employees.length === 0) {
@@ -433,17 +428,17 @@
                     let trackClass = "w-full h-2.5 rounded-full overflow-hidden shadow-inner ";
 
                     if (isTarget2Achieved) {
-                        // Dark Mode Styles
+                        // Dark Mode
                         cardClasses += "bg-slate-800 border-slate-700";
                         if (isActive) cardClasses += " ring-2 ring-blue-400 border-transparent";
                         else cardClasses += " hover:bg-slate-700";
                         
                         nameClass += "text-white";
-                        percentClass += "text-blue-300"; // 밝은 블루로 변경하여 가독성 확보
+                        percentClass += "text-blue-300"; // 밝은 블루
                         deleteBtnClass += "text-slate-500 hover:text-red-400";
                         trackClass += "bg-slate-700";
                     } else {
-                        // Default Light Styles
+                        // Light Mode (Blue Theme)
                         cardClasses += "bg-white border-slate-100";
                         if (isActive) cardClasses += " active ring-2 ring-blue-400 border-transparent";
                         else cardClasses += " hover:border-blue-300";
@@ -454,7 +449,7 @@
                         trackClass += "bg-slate-50";
                     }
 
-                    // 게이지 색상
+                    // 게이지 색상: 빨강 -> 초록 -> 노랑
                     let gaugeColor = 'bg-red-400';
                     if (isTarget2Achieved) {
                         gaugeColor = 'bg-yellow-400';
@@ -473,6 +468,7 @@
                     const item = document.createElement('div');
                     item.className = cardClasses;
 
+                    // 레이아웃: 이름/뱃지/삭제버튼(좌측) --- 퍼센트(우측)
                     item.innerHTML = `
                         <div class="flex justify-between items-center mb-2">
                             <div class="flex items-center gap-2 overflow-hidden">
@@ -680,7 +676,6 @@
         document.getElementById('delete-emp-btn').onclick = () => openDeleteModal(selectedId);
         document.getElementById('refresh-btn').onclick = recalculateAllData;
 
-        // Auto-refresh on load to fix sync issues
         window.onload = () => {
             recalculateAllData();
         };
