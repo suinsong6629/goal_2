@@ -62,9 +62,9 @@
             cursor: pointer;
         }
 
+        /* 활성화 시 테두리 색상은 다크모드 여부와 관계없이 블루 링으로 통일하되 배경색은 JS에서 제어 */
         .employee-item.active {
-            background-color: #f0f7ff;
-            border-color: #bfdbfe;
+            /* JS에서 배경색 처리하므로 여기선 링만 정의 */
         }
 
         .list-delete-btn {
@@ -129,6 +129,17 @@
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-6xl mx-auto space-y-8">
+        <!-- 상단 헤더 및 동기화 버튼 -->
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800">2월 설계사 실적 대시보드</h1>
+                <p class="text-slate-500 text-sm">실시간 목표 달성 현황</p>
+            </div>
+            <button id="refresh-btn" class="bg-white text-slate-600 px-5 py-2.5 rounded-xl font-bold border border-slate-200 hover:bg-slate-50 hover:text-blue-600 transition shadow-sm flex items-center gap-2 group">
+                <i class="fa-solid fa-rotate group-hover:rotate-180 transition-transform duration-500"></i> 데이터 전체 동기화
+            </button>
+        </div>
+
         <!-- 상단 요약 대시보드 -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div class="card p-6 border-l-4 border-blue-400">
@@ -349,7 +360,7 @@
 
         el.addDateInput.value = '2026-02-02';
 
-        // --- Utils ---
+        // --- Utilities ---
         function saveData() { localStorage.setItem('ems_employees', JSON.stringify(employees)); }
         function formatWon(val) { return (val || 0).toLocaleString() + '원'; }
         function showToast(msg) {
@@ -369,7 +380,33 @@
             el.summaryCount.innerText = `${employees.length}명`;
         }
 
-        // --- Render List (뱃지 추가 수정) ---
+        // --- Data Sync Logic ---
+        function recalculateAllData() {
+            employees.forEach(emp => {
+                if (emp.history && Array.isArray(emp.history)) {
+                    emp.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    let sum = 0;
+                    emp.history.forEach(h => {
+                        sum += h.amount;
+                        h.totalAfter = sum;
+                    });
+                    emp.current = sum;
+                } else {
+                    emp.current = 0;
+                    emp.history = [];
+                }
+            });
+            saveData();
+            updateSummary();
+            renderList();
+            if (selectedId) {
+                const emp = employees.find(e => e.id === selectedId);
+                if (emp) updateDetailUI(emp);
+            }
+            showToast('데이터가 동기화되었습니다.');
+        }
+
+        // --- Render List (2차 달성 시 다크모드 적용) ---
         function renderList() {
             el.list.innerHTML = '';
             if (employees.length === 0) {
@@ -384,29 +421,70 @@
                 sortedEmployees.forEach(emp => {
                     const rate = emp.target2 > 0 ? Math.round((emp.current / emp.target2) * 100) : 0;
                     const isActive = emp.id === selectedId;
-                    const item = document.createElement('div');
-                    item.className = `employee-item w-full p-4 border border-slate-100 rounded-[24px] bg-white shadow-sm hover:shadow-md ${isActive ? 'active ring-2 ring-blue-400 border-transparent' : ''}`;
                     
-                    const gaugeColor = rate >= 50 ? 'bg-green-400' : 'bg-red-400';
-                    
-                    // 1차 목표 달성 여부 확인
+                    const isTarget2Achieved = emp.current >= emp.target2;
                     const isTarget1Achieved = emp.current >= emp.target1;
-                    const badgeHtml = isTarget1Achieved 
-                        ? `<span class="bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold flex-shrink-0 animate-fade-in"><i class="fa-solid fa-medal"></i> 1차</span>` 
-                        : '';
+
+                    // 카드 스타일 동적 적용 (2차 달성 시 다크모드)
+                    let cardClasses = `employee-item w-full p-4 border rounded-[24px] shadow-sm hover:shadow-md transition-all duration-300 `;
+                    let nameClass = "font-bold text-lg md:text-xl truncate tracking-tight ";
+                    let percentClass = "text-2xl md:text-3xl font-semibold tabular-nums leading-none flex-shrink-0 ";
+                    let deleteBtnClass = "list-delete-btn transition px-1 py-1 flex-shrink-0 ";
+                    let trackClass = "w-full h-2.5 rounded-full overflow-hidden shadow-inner ";
+
+                    if (isTarget2Achieved) {
+                        // Dark Mode Styles
+                        cardClasses += "bg-slate-800 border-slate-700";
+                        if (isActive) cardClasses += " ring-2 ring-blue-400 border-transparent";
+                        else cardClasses += " hover:bg-slate-700";
+                        
+                        nameClass += "text-white";
+                        percentClass += "text-blue-300"; // 밝은 블루로 변경하여 가독성 확보
+                        deleteBtnClass += "text-slate-500 hover:text-red-400";
+                        trackClass += "bg-slate-700";
+                    } else {
+                        // Default Light Styles
+                        cardClasses += "bg-white border-slate-100";
+                        if (isActive) cardClasses += " active ring-2 ring-blue-400 border-transparent";
+                        else cardClasses += " hover:border-blue-300";
+
+                        nameClass += "text-slate-700";
+                        percentClass += "text-blue-500";
+                        deleteBtnClass += "text-slate-200 hover:text-red-400";
+                        trackClass += "bg-slate-50";
+                    }
+
+                    // 게이지 색상
+                    let gaugeColor = 'bg-red-400';
+                    if (isTarget2Achieved) {
+                        gaugeColor = 'bg-yellow-400';
+                    } else if (isTarget1Achieved) {
+                        gaugeColor = 'bg-green-400';
+                    }
+
+                    // 뱃지
+                    let badgeHtml = '';
+                    if (isTarget2Achieved) {
+                        badgeHtml = `<span class="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold flex-shrink-0 animate-fade-in"><i class="fa-solid fa-medal"></i> 2차</span>`;
+                    } else if (isTarget1Achieved) {
+                        badgeHtml = `<span class="bg-yellow-100 text-yellow-700 text-[10px] px-1.5 py-0.5 rounded-md flex items-center gap-1 font-bold flex-shrink-0 animate-fade-in"><i class="fa-solid fa-medal"></i> 1차</span>`;
+                    }
+
+                    const item = document.createElement('div');
+                    item.className = cardClasses;
 
                     item.innerHTML = `
                         <div class="flex justify-between items-center mb-2">
                             <div class="flex items-center gap-2 overflow-hidden">
-                                <span class="font-bold text-slate-700 text-lg md:text-xl truncate tracking-tight">${emp.name}</span>
+                                <span class="${nameClass}">${emp.name}</span>
                                 ${badgeHtml}
-                                <button class="list-delete-btn text-slate-200 hover:text-red-400 transition px-1 py-1 flex-shrink-0" onclick="event.stopPropagation(); openDeleteModal(${emp.id})">
+                                <button class="${deleteBtnClass}" onclick="event.stopPropagation(); openDeleteModal(${emp.id})">
                                     <i class="fa-solid fa-trash-can text-base"></i>
                                 </button>
                             </div>
-                            <span class="text-2xl md:text-3xl font-semibold text-blue-500 tabular-nums leading-none flex-shrink-0">${rate}%</span>
+                            <span class="${percentClass}">${rate}%</span>
                         </div>
-                        <div class="w-full bg-slate-50 h-2.5 rounded-full overflow-hidden shadow-inner">
+                        <div class="${trackClass}">
                             <div class="h-full ${gaugeColor} rounded-full" style="width: ${Math.min(rate, 100)}%"></div>
                         </div>
                     `;
@@ -600,8 +678,12 @@
         };
 
         document.getElementById('delete-emp-btn').onclick = () => openDeleteModal(selectedId);
+        document.getElementById('refresh-btn').onclick = recalculateAllData;
 
-        window.onload = renderList;
+        // Auto-refresh on load to fix sync issues
+        window.onload = () => {
+            recalculateAllData();
+        };
     </script>
 </body>
 </html>
